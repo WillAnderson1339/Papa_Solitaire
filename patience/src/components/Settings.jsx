@@ -7,6 +7,8 @@ const Settings = ({
   onClose, 
   theme, 
   setTheme, 
+  favouriteColour,
+  setFavouriteColour,
   difficulty, 
   setDifficulty,
   onNewGame
@@ -23,6 +25,8 @@ const Settings = ({
     { id: 'medium', name: 'Medium', drawCount: 3, description: 'Draw 3 cards at a time, unlimited redeals' },
     { id: 'hard', name: 'Hard', drawCount: 3, description: 'Draw 3 cards at a time, 3 redeals maximum' }
   ];
+
+  const colours = ['Red', 'Green', 'Blue', 'Purple', 'Teal'];
 
   if (!isOpen) return null;
 
@@ -65,6 +69,23 @@ const Settings = ({
                   </span>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="settings-section">
+            <h3>Favourite Colour</h3>
+            <div className="colour-options">
+              <select 
+                value={favouriteColour} 
+                onChange={(e) => setFavouriteColour(e.target.value)}
+                className="colour-select"
+              >
+                {colours.map(colour => (
+                  <option key={colour} value={colour}>
+                    {colour}
+                  </option>
+                ))}
+              </select>
             </div>
           </section>
           
@@ -114,6 +135,8 @@ Settings.propTypes = {
     cardBack: PropTypes.string.isRequired
   }).isRequired,
   setTheme: PropTypes.func.isRequired,
+  favouriteColour: PropTypes.string.isRequired,
+  setFavouriteColour: PropTypes.func.isRequired,
   difficulty: PropTypes.shape({
     id: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,

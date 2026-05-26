@@ -47,6 +47,7 @@ const GameBoard = () => {
     drawCount: 1,
     description: 'Draw 1 card at a time, unlimited redeals'
   });
+  const [favouriteColour, setFavouriteColour] = useState('Blue');
   const [redealCount, setRedealCount] = useState(0);
 
   // Refs
@@ -753,6 +754,7 @@ const GameBoard = () => {
           score={score}
           time={time}
           isGameWon={gameWon}
+          drawCount={stock.length}
         />
 
         <GameControls
@@ -896,6 +898,8 @@ const GameBoard = () => {
         onClose={toggleSettings}
         theme={theme}
         setTheme={setTheme}
+        favouriteColour={favouriteColour}
+        setFavouriteColour={setFavouriteColour}
         difficulty={difficulty}
         setDifficulty={setDifficulty}
         onNewGame={restartGame}

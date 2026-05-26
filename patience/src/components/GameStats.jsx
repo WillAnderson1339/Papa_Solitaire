@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { formatTime } from '../utils/helpers';
 import '../styles/GameStats.css';
 
-const GameStats = ({ moves, missedMoves, score, time, isGameWon }) => {
+const GameStats = ({ moves, missedMoves, score, time, isGameWon, drawCount }) => {
   return (
     <div className="game-stats">
       <div className="stat-item">
@@ -13,6 +13,10 @@ const GameStats = ({ moves, missedMoves, score, time, isGameWon }) => {
       <div className="stat-item">
         <span className="stat-label">Moves:</span>
         <span className="stat-value">{moves}</span>
+      </div>
+      <div className="stat-item">
+        <span className="stat-label">Draw Count:</span>
+        <span className="stat-value">{drawCount}</span>
       </div>
       <div className="stat-item">
         <span className="stat-label">Missed:</span>
@@ -36,7 +40,8 @@ GameStats.propTypes = {
   missedMoves: PropTypes.number.isRequired,
   score: PropTypes.number.isRequired,
   time: PropTypes.number.isRequired,
-  isGameWon: PropTypes.bool.isRequired
+  isGameWon: PropTypes.bool.isRequired,
+  drawCount: PropTypes.number.isRequired
 };
 
 export default GameStats;
