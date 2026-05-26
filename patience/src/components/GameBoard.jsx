@@ -9,7 +9,6 @@ import '../styles/GameBoard.css';
 
 const GameBoard = () => {
   // Game state
-  const [deck, setDeck] = useState([]);
   const [stock, setStock] = useState([]);
   const [waste, setWaste] = useState([]);
   const [foundations, setFoundations] = useState([[], [], [], []]);
@@ -194,7 +193,6 @@ const GameBoard = () => {
     }
 
     // Set up the game state
-    setDeck(shuffledDeck);
     setStock(remainingDeck);
     setWaste([]);
     setFoundations([[], [], [], []]);
@@ -373,7 +371,7 @@ const GameBoard = () => {
     if (!draggedCards) return;
 
     // Check if move is valid
-    const { cards, source } = draggedCards;
+    const { cards } = draggedCards;
     const card = cards[0];
 
     if (target === 'foundation') {
