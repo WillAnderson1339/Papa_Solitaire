@@ -30,8 +30,10 @@ const GameBoard = () => {
   const [gameOverReason, setGameOverReason] = useState('');
 
   // History for undo/redo
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [gameHistory, setGameHistory] = useState({
+    states: [],
+    index: -1
+  });
 
   // Settings
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -134,17 +136,17 @@ const GameBoard = () => {
 
   // Save game state to history when a move is made
   const saveToHistory = useCallback((state) => {
-    // If we're not at the end of the history, truncate it
-    const newHistory = history.slice(0, historyIndex + 1);
+    setGameHistory(prev => {
+      const newStates = prev.states.slice(0, prev.index + 1);
+      newStates.push(state);
+      return {
+        states: newStates,
+        index: newStates.length - 1
+      };
+    });
+  }, []);
 
-    // Add the new state to history
-    newHistory.push(state);
-
-    // Update history and historyIndex
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  }, [history, historyIndex]);
-
+  // Initialize the game
   // Initialize the game
   const initializeGame = () => {
     // Reset game state
@@ -156,8 +158,6 @@ const GameBoard = () => {
     setScore(0);
     setTime(0);
     setRedealCount(0);
-    setHistory([]);
-    setHistoryIndex(-1);
     setLastMoveTime(Date.now());
     setStockEmptyTime(null);
     setMovesAfterStockEmpty(0);
@@ -200,7 +200,7 @@ const GameBoard = () => {
     setFoundations([[], [], [], []]);
     setTableau(newTableau);
 
-    // Save initial state to history
+    // Save initial state to history at index 0
     const initialState = {
       stock: remainingDeck,
       waste: [],
@@ -211,8 +211,10 @@ const GameBoard = () => {
       time: 0
     };
 
-    setHistory([initialState]);
-    setHistoryIndex(0);
+    setGameHistory({
+      states: [initialState],
+      index: 0
+    });
 
     // Start the game
     setGameStarted(true);
@@ -240,22 +242,23 @@ const GameBoard = () => {
       }
 
       const recycledStock = waste.map(card => ({ ...card, faceUp: false })).reverse();
-
-      // Save current state to history
-      saveToHistory({
-        stock,
-        waste,
-        foundations,
-        tableau,
-        moves,
-        score,
-        time
-      });
+      const nextMoves = moves + 1;
 
       setStock(recycledStock);
       setWaste([]);
       setRedealCount(prevCount => prevCount + 1);
       incrementMoves();
+
+      // Save state AFTER move
+      saveToHistory({
+        stock: recycledStock,
+        waste: [],
+        foundations,
+        tableau,
+        moves: nextMoves,
+        score: calculateScore(nextMoves, time, gameWon),
+        time
+      });
       return;
     }
 
@@ -269,16 +272,8 @@ const GameBoard = () => {
       drawnCards.push(card);
     }
 
-    // Save current state to history
-    saveToHistory({
-      stock,
-      waste,
-      foundations,
-      tableau,
-      moves,
-      score,
-      time
-    });
+    const newWaste = [...waste, ...drawnCards];
+    const nextMoves = moves + 1;
 
     // Check if stock will be empty after this move
     if (newStock.length === 0 && stockEmptyTime === null) {
@@ -286,8 +281,19 @@ const GameBoard = () => {
     }
 
     setStock(newStock);
-    setWaste([...waste, ...drawnCards]);
+    setWaste(newWaste);
     incrementMoves();
+
+    // Save state AFTER move
+    saveToHistory({
+      stock: newStock,
+      waste: newWaste,
+      foundations,
+      tableau,
+      moves: nextMoves,
+      score: calculateScore(nextMoves, time, gameWon),
+      time
+    });
   };
 
   // Handle card click
@@ -300,21 +306,23 @@ const GameBoard = () => {
 
     // If card is face down in tableau, flip it
     if (source === 'tableau' && !card.faceUp) {
-      // Save current state to history
+      const newTableau = [...tableau];
+      newTableau[stackIndex][index] = { ...card, faceUp: true };
+      const nextMoves = moves + 1;
+
+      setTableau(newTableau);
+      incrementMoves();
+
+      // Save state AFTER move
       saveToHistory({
         stock,
         waste,
         foundations,
-        tableau,
-        moves,
-        score,
+        tableau: newTableau,
+        moves: nextMoves,
+        score: calculateScore(nextMoves, time, gameWon),
         time
       });
-
-      const newTableau = [...tableau];
-      newTableau[stackIndex][index] = { ...card, faceUp: true };
-      setTableau(newTableau);
-      incrementMoves();
       return;
     }
 
@@ -407,17 +415,6 @@ const GameBoard = () => {
 
   // Move card to foundation
   const moveCardToFoundation = (card, source, index, stackIndex, foundationIndex) => {
-    // Save current state to history
-    saveToHistory({
-      stock,
-      waste,
-      foundations,
-      tableau,
-      moves,
-      score,
-      time
-    });
-
     // Create new state
     const newFoundations = [...foundations];
     let newTableau = [...tableau];
@@ -441,12 +438,25 @@ const GameBoard = () => {
       newWaste = newWaste.slice(0, -1);
     }
 
+    const nextMoves = moves + 1;
+
     // Update state
     setFoundations(newFoundations);
     setTableau(newTableau);
     setWaste(newWaste);
     setSelectedCard(null);
     incrementMoves();
+
+    // Save state AFTER move
+    saveToHistory({
+      stock,
+      waste: newWaste,
+      foundations: newFoundations,
+      tableau: newTableau,
+      moves: nextMoves,
+      score: calculateScore(nextMoves, time, gameWon),
+      time
+    });
   };
 
   // Move card to tableau
@@ -456,17 +466,6 @@ const GameBoard = () => {
     if (!isValidMove(card, targetStack[targetStack.length - 1], targetStack.length === 0)) {
       return;
     }
-
-    // Save current state to history
-    saveToHistory({
-      stock,
-      waste,
-      foundations,
-      tableau,
-      moves,
-      score,
-      time
-    });
 
     // Get cards to move
     let cardsToMove = [];
@@ -497,12 +496,25 @@ const GameBoard = () => {
     // Add cards to target tableau
     newTableau[targetStackIndex] = [...newTableau[targetStackIndex], ...cardsToMove];
 
+    const nextMoves = moves + 1;
+
     // Update state
     setTableau(newTableau);
     setWaste(newWaste);
     setFoundations(newFoundations);
     setSelectedCard(null);
     incrementMoves();
+
+    // Save state AFTER move
+    saveToHistory({
+      stock,
+      waste: newWaste,
+      foundations: newFoundations,
+      tableau: newTableau,
+      moves: nextMoves,
+      score: calculateScore(nextMoves, time, gameWon),
+      time
+    });
   };
 
   // Check for missed moves
@@ -548,7 +560,7 @@ const GameBoard = () => {
 
   // Increment move counter
   const incrementMoves = () => {
-    setMoves(moves + 1);
+    setMoves(prev => prev + 1);
     setLastMoveTime(Date.now());
 
     // If stock is empty, increment moves after stock empty
@@ -575,8 +587,8 @@ const GameBoard = () => {
 
   // Undo last move
   const handleUndo = () => {
-    if (historyIndex > 0) {
-      const previousState = history[historyIndex - 1];
+    if (gameHistory.index > 0) {
+      const previousState = gameHistory.states[gameHistory.index - 1];
 
       setStock(previousState.stock);
       setWaste(previousState.waste);
@@ -586,14 +598,17 @@ const GameBoard = () => {
       setScore(previousState.score);
       setTime(previousState.time);
 
-      setHistoryIndex(historyIndex - 1);
+      setGameHistory(prev => ({
+        ...prev,
+        index: prev.index - 1
+      }));
     }
   };
 
   // Redo move
   const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const nextState = history[historyIndex + 1];
+    if (gameHistory.index < gameHistory.states.length - 1) {
+      const nextState = gameHistory.states[gameHistory.index + 1];
 
       setStock(nextState.stock);
       setWaste(nextState.waste);
@@ -603,7 +618,10 @@ const GameBoard = () => {
       setScore(nextState.score);
       setTime(nextState.time);
 
-      setHistoryIndex(historyIndex + 1);
+      setGameHistory(prev => ({
+        ...prev,
+        index: prev.index + 1
+      }));
     }
   };
 
@@ -618,17 +636,6 @@ const GameBoard = () => {
   // Auto-complete the game
   const handleAutoComplete = () => {
     if (!canAutoComplete()) return;
-
-    // Save current state to history
-    saveToHistory({
-      stock,
-      waste,
-      foundations,
-      tableau,
-      moves,
-      score,
-      time
-    });
 
     // Create a copy of the current state
     let newTableau = [...tableau];
@@ -675,11 +682,24 @@ const GameBoard = () => {
       }
     }
 
+    const nextMoves = moves + movesMade;
+
     // Update state
     setTableau(newTableau);
     setWaste(newWaste);
     setFoundations(newFoundations);
-    setMoves(moves + movesMade);
+    setMoves(nextMoves);
+
+    // Save final state AFTER auto-complete
+    saveToHistory({
+      stock,
+      waste: newWaste,
+      foundations: newFoundations,
+      tableau: newTableau,
+      moves: nextMoves,
+      score: calculateScore(nextMoves, time, gameWon),
+      time
+    });
   };
 
   // Restart the game
@@ -764,8 +784,8 @@ const GameBoard = () => {
           onNewGame={restartGame}
           onSettings={toggleSettings}
           onPause={togglePause}
-          canUndo={historyIndex > 0}
-          canRedo={historyIndex < history.length - 1}
+          canUndo={gameHistory.index > 0}
+          canRedo={gameHistory.index < gameHistory.states.length - 1}
           canAutoComplete={canAutoComplete()}
           isPaused={gamePaused}
           gameInProgress={gameStarted && !gameWon && !gameLost}
@@ -809,13 +829,15 @@ const GameBoard = () => {
               suit={stock[stock.length - 1].suit}
               value={stock[stock.length - 1].value}
               faceUp={false}
-              onClick={() => handleCardClick(stock[stock.length - 1], 'stock')}
               cardBackColor={theme.cardBack}
             />
           ) : (
             <div
               className="empty-pile"
-              onClick={() => waste.length > 0 && drawFromStock()}
+              onClick={(e) => {
+                e.stopPropagation();
+                waste.length > 0 && drawFromStock();
+              }}
             >
               ↻
             </div>
