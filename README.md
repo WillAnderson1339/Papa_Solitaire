@@ -6,6 +6,8 @@ A classic Solitaire (Patience) card game built with React 19 and Vite. Play the 
 [![Vite](https://img.shields.io/badge/Vite-6.2-646CFF.svg)](https://vitejs.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
+Forked and Modified by Will May 26, 2026
+
 ---
 
 ## 🎮 Features
