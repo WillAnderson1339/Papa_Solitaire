@@ -5,4 +5,11 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/Papa_Solitaire/',
+  test: {
+    coverage: {
+      provider: 'v8',
+      include: ['src/logic/**', 'src/utils/**'],
+      reporter: ['text', 'html'],
+    },
+  },
 })
