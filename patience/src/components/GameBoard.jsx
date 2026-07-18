@@ -5,6 +5,15 @@ import GameControls from './GameControls';
 import Settings from './Settings';
 import { isValidMove, isValidFoundationMove, isGameWon, hasValidMoves } from '../logic/rules';
 import { autoComplete } from '../logic/autoComplete';
+import {
+  createSnapshot,
+  createInitialHistory,
+  pushHistory,
+  undoHistory,
+  redoHistory,
+  canUndo,
+  canRedo
+} from '../logic/history';
 import { calculateScore } from '../utils/helpers';
 import '../styles/GameBoard.css';
 
@@ -134,16 +143,15 @@ const GameBoard = () => {
 
   // Save game state to history when a move is made
   const saveToHistory = useCallback((state) => {
-    // If we're not at the end of the history, truncate it
-    const newHistory = history.slice(0, historyIndex + 1);
-
-    // Add the new state to history
-    newHistory.push(state);
+    const { history: newHistory, historyIndex: newHistoryIndex } = pushHistory(history, historyIndex, state);
 
     // Update history and historyIndex
     setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+    setHistoryIndex(newHistoryIndex);
   }, [history, historyIndex]);
+
+  // Snapshot of the current game state
+  const snapshot = () => createSnapshot(stock, waste, foundations, tableau, moves, score, time);
 
   // Initialize the game
   const initializeGame = () => {
@@ -200,18 +208,11 @@ const GameBoard = () => {
     setTableau(newTableau);
 
     // Save initial state to history
-    const initialState = {
-      stock: remainingDeck,
-      waste: [],
-      foundations: [[], [], [], []],
-      tableau: newTableau,
-      moves: 0,
-      score: 0,
-      time: 0
-    };
+    const initialState = createSnapshot(remainingDeck, [], [[], [], [], []], newTableau, 0, 0, 0);
+    const { history: initialHistory, historyIndex: initialHistoryIndex } = createInitialHistory(initialState);
 
-    setHistory([initialState]);
-    setHistoryIndex(0);
+    setHistory(initialHistory);
+    setHistoryIndex(initialHistoryIndex);
 
     // Start the game
     setGameStarted(true);
@@ -241,15 +242,7 @@ const GameBoard = () => {
       const recycledStock = waste.map(card => ({ ...card, faceUp: false })).reverse();
 
       // Save current state to history
-      saveToHistory({
-        stock,
-        waste,
-        foundations,
-        tableau,
-        moves,
-        score,
-        time
-      });
+      saveToHistory(snapshot());
 
       setStock(recycledStock);
       setWaste([]);
@@ -269,15 +262,7 @@ const GameBoard = () => {
     }
 
     // Save current state to history
-    saveToHistory({
-      stock,
-      waste,
-      foundations,
-      tableau,
-      moves,
-      score,
-      time
-    });
+    saveToHistory(snapshot());
 
     // Check if stock will be empty after this move
     if (newStock.length === 0 && stockEmptyTime === null) {
@@ -300,15 +285,7 @@ const GameBoard = () => {
     // If card is face down in tableau, flip it
     if (source === 'tableau' && !card.faceUp) {
       // Save current state to history
-      saveToHistory({
-        stock,
-        waste,
-        foundations,
-        tableau,
-        moves,
-        score,
-        time
-      });
+      saveToHistory(snapshot());
 
       const newTableau = [...tableau];
       newTableau[stackIndex][index] = { ...card, faceUp: true };
@@ -407,15 +384,7 @@ const GameBoard = () => {
   // Move card to foundation
   const moveCardToFoundation = (card, source, index, stackIndex, foundationIndex) => {
     // Save current state to history
-    saveToHistory({
-      stock,
-      waste,
-      foundations,
-      tableau,
-      moves,
-      score,
-      time
-    });
+    saveToHistory(snapshot());
 
     // Create new state
     const newFoundations = [...foundations];
@@ -457,15 +426,7 @@ const GameBoard = () => {
     }
 
     // Save current state to history
-    saveToHistory({
-      stock,
-      waste,
-      foundations,
-      tableau,
-      moves,
-      score,
-      time
-    });
+    saveToHistory(snapshot());
 
     // Get cards to move
     let cardsToMove = [];
@@ -574,8 +535,9 @@ const GameBoard = () => {
 
   // Undo last move
   const handleUndo = () => {
-    if (historyIndex > 0) {
-      const previousState = history[historyIndex - 1];
+    const result = undoHistory(history, historyIndex, snapshot());
+    if (result) {
+      const previousState = result.state;
 
       setStock(previousState.stock);
       setWaste(previousState.waste);
@@ -585,14 +547,16 @@ const GameBoard = () => {
       setScore(previousState.score);
       setTime(previousState.time);
 
-      setHistoryIndex(historyIndex - 1);
+      setHistory(result.history);
+      setHistoryIndex(result.historyIndex);
     }
   };
 
   // Redo move
   const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const nextState = history[historyIndex + 1];
+    const result = redoHistory(history, historyIndex, snapshot());
+    if (result) {
+      const nextState = result.state;
 
       setStock(nextState.stock);
       setWaste(nextState.waste);
@@ -602,7 +566,8 @@ const GameBoard = () => {
       setScore(nextState.score);
       setTime(nextState.time);
 
-      setHistoryIndex(historyIndex + 1);
+      setHistory(result.history);
+      setHistoryIndex(result.historyIndex);
     }
   };
 
@@ -619,15 +584,7 @@ const GameBoard = () => {
     if (!canAutoComplete()) return;
 
     // Save current state to history
-    saveToHistory({
-      stock,
-      waste,
-      foundations,
-      tableau,
-      moves,
-      score,
-      time
-    });
+    saveToHistory(snapshot());
 
     // Move every playable card to the foundations
     const {
@@ -726,8 +683,8 @@ const GameBoard = () => {
           onNewGame={restartGame}
           onSettings={toggleSettings}
           onPause={togglePause}
-          canUndo={historyIndex > 0}
-          canRedo={historyIndex < history.length - 1}
+          canUndo={canUndo(history, historyIndex)}
+          canRedo={canRedo(history, historyIndex)}
           canAutoComplete={canAutoComplete()}
           isPaused={gamePaused}
           gameInProgress={gameStarted && !gameWon && !gameLost}
