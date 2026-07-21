@@ -54,3 +54,6 @@ coverage/
 *.temp
 .cache/
 
+
+# Local tooling
+.claude/

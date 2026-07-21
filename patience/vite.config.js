@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      include: ['src/logic/**', 'src/utils/**'],
+      include: ['src/core/**', 'src/games/**', 'src/utils/**'],
       reporter: ['text', 'html'],
     },
   },

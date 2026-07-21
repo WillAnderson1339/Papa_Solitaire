@@ -1,7 +1,7 @@
 // Integration tests that exercise rules, actions, and helpers together,
 // simulating realistic sequences of play with stacked (non-random) decks.
 import { describe, it, expect } from 'vitest';
-import { shuffleArray } from '../utils/helpers';
+import { shuffleArray } from '../../utils/helpers';
 import { isValidMove, isValidFoundationMove, hasValidMoves, isGameWon } from './rules';
 import {
   drawFromStock,

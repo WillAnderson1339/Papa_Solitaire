@@ -3,8 +3,8 @@ import Card from './Card';
 import GameStats from './GameStats';
 import GameControls from './GameControls';
 import Settings from './Settings';
-import { isValidMove, isValidFoundationMove, isGameWon, hasValidMoves } from '../logic/rules';
-import { autoComplete } from '../logic/autoComplete';
+import { isValidMove, isValidFoundationMove, isGameWon, hasValidMoves } from '../games/klondike/rules';
+import { autoComplete } from '../games/klondike/autoComplete';
 import {
   createSnapshot,
   createInitialHistory,
@@ -13,9 +13,15 @@ import {
   redoHistory,
   canUndo,
   canRedo
-} from '../logic/history';
+} from '../core/history';
+import { dealGame } from '../core/deal';
+import { DEFAULT_PREFERENCES } from '../core/prefs';
 import { calculateScore } from '../utils/helpers';
+import '../games';
+import { getGame } from '../games/registry';
 import '../styles/GameBoard.css';
+
+const game = getGame('klondike');
 
 const GameBoard = () => {
   // Game state
@@ -44,19 +50,14 @@ const GameBoard = () => {
 
   // Settings
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [theme, setTheme] = useState({
-    id: 'classic',
-    name: 'Classic Green',
-    tableColor: '#2a7e43',
-    cardBack: 'blue'
-  });
+  const [theme, setTheme] = useState(DEFAULT_PREFERENCES.theme);
   const [difficulty, setDifficulty] = useState({
     id: 'easy',
     name: 'Easy',
     drawCount: 1,
     description: 'Draw 1 card at a time, unlimited redeals'
   });
-  const [favouriteColour, setFavouriteColour] = useState('Blue');
+  const [favouriteColour, setFavouriteColour] = useState(DEFAULT_PREFERENCES.favouriteColour);
   const [redealCount, setRedealCount] = useState(0);
 
   // Refs
@@ -171,44 +172,22 @@ const GameBoard = () => {
     setMovesAfterStockEmpty(0);
     setGameOverReason('');
 
-    // Create and shuffle a new deck
-    const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
-    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-
-    const newDeck = [];
-    suits.forEach(suit => {
-      values.forEach(value => {
-        newDeck.push({
-          id: `${suit}-${value}`,
-          suit,
-          value,
-          faceUp: false
-        });
-      });
-    });
-
-    // Shuffle the deck
-    const shuffledDeck = shuffleArray([...newDeck]);
-
-    // Deal cards to tableau
-    const newTableau = Array(7).fill().map(() => []);
-    let remainingDeck = [...shuffledDeck];
-
-    for (let i = 0; i < 7; i++) {
-      for (let j = 0; j <= i; j++) {
-        const card = { ...remainingDeck.pop(), faceUp: j === i };
-        newTableau[i].push(card);
-      }
-    }
+    // Build, shuffle, and deal a new game
+    const {
+      tableau: newTableau,
+      stock: newStock,
+      waste: newWaste,
+      foundations: newFoundations
+    } = dealGame(game);
 
     // Set up the game state
-    setStock(remainingDeck);
-    setWaste([]);
-    setFoundations([[], [], [], []]);
+    setStock(newStock);
+    setWaste(newWaste);
+    setFoundations(newFoundations);
     setTableau(newTableau);
 
     // Save initial state to history
-    const initialState = createSnapshot(remainingDeck, [], [[], [], [], []], newTableau, 0, 0, 0);
+    const initialState = createSnapshot(newStock, newWaste, newFoundations, newTableau, 0, 0, 0);
     const { history: initialHistory, historyIndex: initialHistoryIndex } = createInitialHistory(initialState);
 
     setHistory(initialHistory);
@@ -216,16 +195,6 @@ const GameBoard = () => {
 
     // Start the game
     setGameStarted(true);
-  };
-
-  // Shuffle array (Fisher-Yates algorithm)
-  const shuffleArray = (array) => {
-    const newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-    }
-    return newArray;
   };
 
   // Draw cards from stock to waste
