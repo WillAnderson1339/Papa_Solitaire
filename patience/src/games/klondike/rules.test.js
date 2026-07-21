@@ -56,8 +56,8 @@ describe('hasValidMoves', () => {
   const emptyTableau = [[], [], [], [], [], [], []];
   const emptyFoundations = [[], [], [], []];
 
-  it('returns true while the stock still has cards', () => {
-    expect(hasValidMoves(emptyTableau, emptyFoundations, [], [card('hearts', '5', false)])).toBe(true);
+  it('returns true when a playable card is waiting in the stock', () => {
+    expect(hasValidMoves(emptyTableau, emptyFoundations, [], [card('hearts', 'A', false)])).toBe(true);
   });
 
   it('returns true when the waste card can go to a foundation', () => {

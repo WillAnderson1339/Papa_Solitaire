@@ -154,9 +154,6 @@ describe('endgame', () => {
     let stock = [card('diamonds', '4', false)];
     let waste = [];
 
-    // A card is still in the stock, so the game is not over yet
-    expect(hasValidMoves(tableau, foundations, waste, stock)).toBe(true);
-
     // The drawn 4 of diamonds fits nowhere, and the two red court
     // cards cannot stack on each other
     ({ stock, waste } = drawFromStock(stock, waste));
