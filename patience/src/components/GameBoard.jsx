@@ -4,6 +4,8 @@ import GameStats from './GameStats';
 import GameControls from './GameControls';
 import Settings from './Settings';
 import { isValidMove, isValidFoundationMove, isGameWon, hasValidMoves } from '../games/klondike/rules';
+import { moveToFoundation, moveToTableau } from '../games/klondike/moves';
+import { moveTableauToFoundation, moveWasteToFoundation } from '../games/klondike/actions';
 import { autoComplete } from '../games/klondike/autoComplete';
 import {
   createSnapshot,
@@ -265,10 +267,27 @@ const GameBoard = () => {
 
     // Try to move to foundation automatically
     if (card.faceUp) {
+      const isTopOfPile =
+        (source === 'waste' && index === waste.length - 1) ||
+        (source === 'tableau' && index === tableau[stackIndex].length - 1);
+
       // Check if card can be moved to foundation
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 4 && isTopOfPile; i++) {
         if (isValidFoundationMove(card, foundations[i])) {
-          moveCardToFoundation(card, source, index, stackIndex, i);
+          saveToHistory(snapshot());
+
+          if (source === 'tableau') {
+            const result = moveTableauToFoundation(tableau, foundations, stackIndex, index, i);
+            setTableau(result.tableau);
+            setFoundations(result.foundations);
+          } else {
+            const result = moveWasteToFoundation(waste, foundations, i);
+            setWaste(result.waste);
+            setFoundations(result.foundations);
+          }
+
+          setSelectedCard(null);
+          incrementMoves();
           return;
         }
       }
@@ -350,86 +369,35 @@ const GameBoard = () => {
     setDraggedCards(null);
   };
 
-  // Move card to foundation
+  // Move card to foundation (drag path)
   const moveCardToFoundation = (card, source, index, stackIndex, foundationIndex) => {
     // Save current state to history
     saveToHistory(snapshot());
 
-    // Create new state
-    const newFoundations = [...foundations];
-    let newTableau = [...tableau];
-    let newWaste = [...waste];
-
-    // Add card to foundation
-    newFoundations[foundationIndex] = [...newFoundations[foundationIndex], card];
-
-    // Remove card from source
-    if (source === 'tableau') {
-      newTableau[stackIndex] = newTableau[stackIndex].slice(0, index);
-
-      // Flip the new top card if needed
-      if (newTableau[stackIndex].length > 0 && !newTableau[stackIndex][newTableau[stackIndex].length - 1].faceUp) {
-        newTableau[stackIndex][newTableau[stackIndex].length - 1] = {
-          ...newTableau[stackIndex][newTableau[stackIndex].length - 1],
-          faceUp: true
-        };
-      }
-    } else if (source === 'waste') {
-      newWaste = newWaste.slice(0, -1);
-    }
+    const result = moveToFoundation(tableau, waste, foundations, card, source, index, stackIndex, foundationIndex);
 
     // Update state
-    setFoundations(newFoundations);
-    setTableau(newTableau);
-    setWaste(newWaste);
+    setFoundations(result.foundations);
+    setTableau(result.tableau);
+    setWaste(result.waste);
     setSelectedCard(null);
     incrementMoves();
   };
 
-  // Move card to tableau
+  // Move card to tableau (drag path)
   const moveCardToTableau = (card, source, index, sourceStackIndex, targetStackIndex) => {
-    // Check if move is valid
-    const targetStack = tableau[targetStackIndex];
-    if (!isValidMove(card, targetStack[targetStack.length - 1], targetStack.length === 0)) {
+    const result = moveToTableau(tableau, waste, foundations, card, source, index, sourceStackIndex, targetStackIndex);
+    if (!result) {
       return;
     }
 
     // Save current state to history
     saveToHistory(snapshot());
 
-    // Get cards to move
-    let cardsToMove = [];
-    let newTableau = [...tableau];
-    let newWaste = [...waste];
-    let newFoundations = [...foundations];
-
-    if (source === 'tableau') {
-      // If moving from tableau, include all cards below
-      cardsToMove = tableau[sourceStackIndex].slice(index);
-      newTableau[sourceStackIndex] = tableau[sourceStackIndex].slice(0, index);
-
-      // Flip the new top card if needed
-      if (newTableau[sourceStackIndex].length > 0 && !newTableau[sourceStackIndex][newTableau[sourceStackIndex].length - 1].faceUp) {
-        newTableau[sourceStackIndex][newTableau[sourceStackIndex].length - 1] = {
-          ...newTableau[sourceStackIndex][newTableau[sourceStackIndex].length - 1],
-          faceUp: true
-        };
-      }
-    } else if (source === 'waste') {
-      cardsToMove = [card];
-      newWaste = waste.slice(0, -1);
-    } else if (source === 'foundation') {
-      cardsToMove = [card];
-      newFoundations[sourceStackIndex] = foundations[sourceStackIndex].slice(0, -1);
-    }
-
-    // Add cards to target tableau
-    newTableau[targetStackIndex] = [...newTableau[targetStackIndex], ...cardsToMove];
-
     // Update state
-    setTableau(newTableau);
-    setWaste(newWaste);
-    setFoundations(newFoundations);
+    setTableau(result.tableau);
+    setWaste(result.waste);
+    setFoundations(result.foundations);
     setSelectedCard(null);
     incrementMoves();
   };
@@ -581,7 +549,14 @@ const GameBoard = () => {
     if (gameWon || gameLost) return;
 
     // Check if there are any valid moves
-    const validMovesExist = hasValidMoves(tableau, foundations, waste, stock);
+    const validMovesExist = hasValidMoves(
+      tableau,
+      foundations,
+      waste,
+      stock,
+      difficulty.drawCount,
+      difficulty.id === 'hard' ? 3 - redealCount : Infinity
+    );
 
     // Check for game over conditions
     let gameOver = false;
