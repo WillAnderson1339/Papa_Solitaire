@@ -37,3 +37,24 @@ main {
   text-align: center;
   font-size: 0.8rem;
 }
+
+.game-picker {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.game-picker button {
+  padding: 6px 18px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.game-picker button.active {
+  background: gold;
+  font-weight: bold;
+}

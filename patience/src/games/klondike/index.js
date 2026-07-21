@@ -1,4 +1,5 @@
 import { DEFAULT_DECK_CONFIG } from '../../core/deck';
+import { isValidMove, isValidFoundationMove, isGameWon } from './rules';
 
 // Deal a standard Klondike board: seven tableau columns of 1..7 cards with
 // the top card face up, and the remaining cards face down in the stock.
@@ -25,5 +26,10 @@ export const klondike = {
   id: 'klondike',
   name: 'Klondike',
   deckConfig: DEFAULT_DECK_CONFIG,
-  deal
+  deal,
+  rules: {
+    canMoveToPile: isValidMove,
+    canMoveToFoundation: isValidFoundationMove,
+    isWon: isGameWon
+  }
 };

@@ -1,0 +1,90 @@
+.freecell-board {
+  padding: 16px;
+  background-color: #2a7e43;
+  min-height: 80vh;
+}
+
+.freecell-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.freecell-controls button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.freecell-controls button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.freecell-moves {
+  color: white;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.freecell-won {
+  color: gold;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.freecell-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.freecell-cells,
+.freecell-foundations {
+  display: flex;
+  gap: 10px;
+}
+
+.freecell-cell,
+.freecell-foundation {
+  width: 80px;
+  height: 112px;
+  border: 2px dashed rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.freecell-cell.selected {
+  border-color: gold;
+  border-style: solid;
+}
+
+.freecell-cascades {
+  display: flex;
+  gap: 10px;
+}
+
+.freecell-cascade {
+  width: 84px;
+  min-height: 120px;
+  cursor: pointer;
+}
+
+.freecell-cascade.selected .freecell-cascade-card:last-child {
+  outline: 3px solid gold;
+  outline-offset: -1px;
+  border-radius: 8px;
+}
+
+.freecell-cascade-card {
+  margin-top: -84px;
+}
+
+.freecell-cascade-card:first-child {
+  margin-top: 0;
+}
