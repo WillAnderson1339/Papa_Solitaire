@@ -15,13 +15,11 @@ export const runFrom = (pile, index) => pile.slice(index);
 // A copy of the pile keeping only the cards before `index`
 export const before = (pile, index) => pile.slice(0, index);
 
-// Flip the top card of a column face up if it is face down.
-// Hot path during long games: card objects are shared between piles and
-// snapshots and piles are treated as append-only, so flipping in place
-// avoids churning new arrays and objects on every exposed card.
+// Reveal the top card of a column once it becomes exposed by a move.
 export const flipTopCard = (column) => {
-  if (column.length > 0 && !column[column.length - 1].faceUp) {
-    column[column.length - 1].faceUp = true;
+  const top = column[column.length - 1];
+  if (top && !top.faceUp) {
+    Object.assign(top, { faceUp: true });
   }
   return column;
 };

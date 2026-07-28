@@ -20,7 +20,8 @@ export const drawFromStock = (stock, waste, count = 1) => {
   const newStock = [...stock];
   
   for (let i = 0; i < count && newStock.length > 0; i++) {
-    const card = { ...newStock.pop(), faceUp: true };
+    const card = { ...newStock.pop() };
+    Object.assign(card, { faceUp: true });
     drawnCards.push(card);
   }
   
@@ -82,10 +83,9 @@ export const moveTableauToFoundation = (tableau, foundations, columnIndex, cardI
   
   // Flip the new top card if needed
   if (newTableau[columnIndex].length > 0 && !newTableau[columnIndex][newTableau[columnIndex].length - 1].faceUp) {
-    newTableau[columnIndex][newTableau[columnIndex].length - 1] = {
-      ...newTableau[columnIndex][newTableau[columnIndex].length - 1],
-      faceUp: true
-    };
+    const exposed = { ...newTableau[columnIndex][newTableau[columnIndex].length - 1] };
+    Object.assign(exposed, { faceUp: true });
+    newTableau[columnIndex][newTableau[columnIndex].length - 1] = exposed;
   }
   
   const newFoundations = [...foundations];
